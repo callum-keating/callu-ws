@@ -1,4 +1,3 @@
-#include <string.h>
 #include <stdio.h>
 #include <netinet/in.h>
 #include <stdlib.h>
