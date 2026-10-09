@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stdio.h>
 #include <netinet/in.h>
 #include <stdlib.h>
@@ -48,7 +49,7 @@ void wait_until_connection(char *message) {
     }
     printf("CLIENT CONNECTED!\n");
 
-    write(client_fd, message, sizeof(message));
+    write(client_fd, message, strlen(message));
     close(client_fd);
 }
 
