@@ -38,7 +38,7 @@ int init_network(struct sockaddr_in *addr_struct, int socket_filedesc) {
     return 0;
 }
 
-void wait_until_connection() {
+void wait_until_connection(char *message) {
     struct sockaddr_in client_addr = {0};
     socklen_t client_len = sizeof(client_addr);
     int client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &client_len);
@@ -48,8 +48,6 @@ void wait_until_connection() {
     }
     printf("CLIENT CONNECTED!\n");
 
-    char message[256] = "";
-    snprintf(message, sizeof(message), "%s%d%s", "you are vistor number ", 1, "\n");
     write(client_fd, message, sizeof(message));
     close(client_fd);
 }

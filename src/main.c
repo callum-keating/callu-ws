@@ -20,7 +20,7 @@ int main() {
     init_network(&my_addr, sockfd);
 
     while (1) {
-        wait_until_connection();
+        wait_until_connection("hello\n");
     }
     close_network();
     printf("ran successfully\n");
