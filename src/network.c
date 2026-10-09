@@ -4,44 +4,41 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-static struct sockaddr_in my_addr = {0};
+static struct sockaddr_in *my_addr = {0};
 
 
 // create a socket file descriptor with ipv4, tpc, and no protocol
 static int socketfd;
 
-int init_network() {
-    my_addr.sin_addr.s_addr = INADDR_ANY;   // use ipv4
-    my_addr.sin_family = AF_INET;           // use port 1234. htons converts to network byte
-    my_addr.sin_port = htons(1234);         // accepts connections from any local ipv4 address
-
+int init_network(struct sockaddr_in *addr_struct, int socket_filedesc) {
+    my_addr = addr_struct;
 
     // create a socket file descriptor with ipv4, tpc, and no protocol
-    socketfd = socket(AF_INET, SOCK_STREAM, 0);
+    socketfd = socket_filedesc;
 
     if (socketfd == -1) {
         perror("error when creating socket");
-        return 1;
+        quick_exit(1);
     }
 
     int opt = 1;
     if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
         perror("setsockopt");
         close(socketfd);
-        return 1;
+        quick_exit(1);
     }
 
     // bind to port and address
-    if (bind(socketfd, (const struct sockaddr *)&my_addr, sizeof(my_addr)) == -1) {
+    if (bind(socketfd, (const struct sockaddr *)my_addr, sizeof(*my_addr)) == -1) {
         perror("error when binding");
-        return 2;
+        quick_exit(2);
     }
 
     listen(socketfd, 10);
     return 0;
 }
 
-void wait_until_connection(int viscount) {
+void wait_until_connection() {
     struct sockaddr_in client_addr = {0};
     socklen_t client_len = sizeof(client_addr);
     int client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &client_len);
@@ -51,8 +48,8 @@ void wait_until_connection(int viscount) {
     }
     printf("CLIENT CONNECTED!\n");
 
-    char message[50] = "";
-    snprintf(message, sizeof(message), "%s%d%s", "you are vistor number ", viscount, "\n");
+    char message[256] = "";
+    snprintf(message, sizeof(message), "%s%d%s", "you are vistor number ", 1, "\n");
     write(client_fd, message, sizeof(message));
     close(client_fd);
 }
