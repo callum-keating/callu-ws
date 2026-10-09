@@ -39,18 +39,17 @@ int init_network(struct sockaddr_in *addr_struct, int socket_filedesc) {
     return 0;
 }
 
-void wait_until_connection(char *message) {
+int wait_until_connection() {
     struct sockaddr_in client_addr = {0};
     socklen_t client_len = sizeof(client_addr);
     int client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &client_len);
+    printf("CLIENT CONNECTED!\n");
     if (client_fd == -1) {
         perror("error when accepting request");
         quick_exit(3);
     }
-    printf("CLIENT CONNECTED!\n");
+    return client_fd;
 
-    write(client_fd, message, strlen(message));
-    close(client_fd);
 }
 
 void close_network() {

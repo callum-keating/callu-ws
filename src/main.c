@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "network.h"
@@ -20,7 +21,10 @@ int main() {
     init_network(&my_addr, sockfd);
 
     while (1) {
-        wait_until_connection("hello\n");
+        int client_fd = wait_until_connection();
+        char message[] = "hello\n";
+        write(client_fd, message, strlen(message));
+        close(client_fd);
     }
     close_network();
     printf("ran successfully\n");
