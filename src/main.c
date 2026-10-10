@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <netinet/in.h>
@@ -25,9 +26,6 @@ void handle_connection(int client_fd) {
     // go back to beginning of file
     rewind(index_html);
 
-    // to fit the \r\n
-    file_size+=2;
-
     printf("file is: %ld bytes long\n", file_size);
     char *html_header;
     asprintf(&html_header,
@@ -41,14 +39,17 @@ void handle_connection(int client_fd) {
 
     write(client_fd, html_header, strlen(html_header));
 
-    // write in the file
+    // write in the file whilst handling partial writes
 
     char buffer[4096] = "";
-    while (fread(buffer, 1, sizeof(buffer), index_html) > 0) {
-        write(client_fd, buffer, 4096);
+    size_t read_bytes = 0;
+    while ((read_bytes = fread(buffer, 1, sizeof(buffer), index_html)) > 0) {
+        size_t sent_bytes = 0;
+        while (sent_bytes < read_bytes) {
+            sent_bytes+=write(client_fd, buffer + sent_bytes, read_bytes - sent_bytes);
+        }
     }
 
-    write(client_fd, "\r\n", strlen("\r\n"));
     close(client_fd);
 }
 
