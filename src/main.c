@@ -42,9 +42,11 @@ void handle_connection(int client_fd) {
     write(client_fd, html_header, strlen(html_header));
 
     // write in the file
+
     char buffer[4096] = "";
-    fread(buffer, sizeof(char), 4096, index_html);
-    write(client_fd, buffer, 4096);
+    while (fread(buffer, 1, sizeof(buffer), index_html) > 0) {
+        write(client_fd, buffer, 4096);
+    }
 
     write(client_fd, "\r\n", strlen("\r\n"));
     close(client_fd);
