@@ -6,7 +6,7 @@ SRCFILES := $(shell find src -name "*.c")
 OBJFILES := $(patsubst src/%.c, $(OBJ_DIR)/%.o,$(SRCFILES))
 
 CC := clang
-CFLAGS := -std=gnu23
+CFLAGS := -std=gnu23 -g
 
 all: $(EXECUTABLE)
 

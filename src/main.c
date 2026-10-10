@@ -25,6 +25,7 @@ void handle_connection(int client_fd) {
     regex_t regex;
     if (regcomp(&regex, "GET /([^[:space:]]+)? HTTP/([0-9.]+)", REG_EXTENDED) != 0) {
         perror("Error compiling regex");
+        close(client_fd);
         quick_exit(4);
     }
     
@@ -35,23 +36,37 @@ void handle_connection(int client_fd) {
         return;
     }
 
-    char *path = "index.html";
+    char *path;
     regmatch_t path_match = matches[1];
     if (path_match.rm_so < 0 || path_match.rm_eo < 0) {
         printf("PATH IS JUST / USING index.html\n");
+        path = strdup("index.html");
     } else {
-        int path_size = path_match.rm_eo - path_match.rm_so;
-        path = malloc(path_size);
-        strncpy(path, read_buffer+path_match.rm_so, path_size);
+        size_t path_size = (size_t)path_match.rm_eo - path_match.rm_so;
+        path = malloc(path_size + 1);
+        memcpy(path, read_buffer + path_match.rm_so, path_size);
+        path[path_size] = '\0';
     }
 
-    printf("path: %s\n", path);
+    printf("path: %s\t\t %lu %lu\n", path, strlen(path), strlen("www/"));
+
+    size_t file_path_size = strlen("www/") + strlen(path) + 1;
+    char *file = malloc(file_path_size);
+
+    if (file == NULL) {
+        perror("error when mallocing file name buffer");
+        free(path);
+        return;
+    }
+    strcat(file, path);
+    snprintf(file, file_path_size, "www/%s", path);
 
     FILE *ret_file;
-    ret_file = fopen("www/index.html", "r");
+    ret_file = fopen(file, "r");
 
     if (ret_file == NULL) {
         perror("error opening index.html");
+        close(client_fd);
         quick_exit(3);
     }
 
