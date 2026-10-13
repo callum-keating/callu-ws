@@ -65,9 +65,10 @@ void handle_connection(int client_fd) {
     ret_file = fopen(file, "r");
 
     if (ret_file == NULL) {
-        perror("error opening index.html");
+        printf("error opening file %s\n", file);
+        free(path);
         close(client_fd);
-        quick_exit(3);
+        return;
     }
 
     // go to the end of the file
