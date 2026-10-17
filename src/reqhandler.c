@@ -5,64 +5,60 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <unistd.h>
-#include <regex.h>
 
 #include "reqhandler.h"
 
 static int get_params(char *http_header, struct http_req *http_req_struct) {
     char *path = NULL;
+    char *cpy = NULL;
     //  A request message from a client to a server includes, within the first line of that message, the method to be applied to the resource, the identifier of the resource, and the protocol version in use.  meaning I can assume the first line WILL be GET /whatever HTTP/1.1
     if (strncmp(http_header, "GET", 3)) {
         printf("METHOD IS NOT GET\n");
         goto error;
     }
     http_req_struct->method = HTTP_METHOD_GET;
+    cpy = strdup(http_header);
+    path = strchr(cpy, ' ');
 
-    regex_t regex;
-    if (regcomp(&regex, "GET /([^[:space:]]+)? HTTP/([0-9.]+)", REG_EXTENDED) != 0) {
-        perror("Error compiling regex");
-        goto error;
-        quick_exit(4);
+    if (path == NULL)
+        goto malformed;
+
+    path++;
+
+    if (*path != '/')
+        goto malformed;
+
+    path++;
+
+    size_t until_space = 0;
+
+    while (path[until_space] != ' ' && path[until_space] != '\0') {
+        until_space++;
     }
 
-    regmatch_t matches[3];
-    if (regexec(&regex, http_header, 3, matches, 0) == REG_NOMATCH) {
-        printf("DID NOT MATCH REGEX\n");
-        goto error;
-    }
+    path[until_space] = '\0';
 
-    regmatch_t path_match = matches[1];
-    if (path_match.rm_so < 0 || path_match.rm_eo < 0) {
-        printf("PATH IS JUST / USING index.html\n");
+    char *directory = "www/";
+    size_t len = strlen(directory);
+
+    if (strcmp(path, "") == 0) {
         path = strdup("index.html");
-    } else {
-        size_t path_size = (size_t)path_match.rm_eo - path_match.rm_so;
-        path = malloc(path_size + 1);
-        memcpy(path, http_header + path_match.rm_so, path_size);
-        path[path_size] = '\0';
     }
 
-    printf("path: %s\t\t %lu %lu\n", path, strlen(path), strlen("www/"));
+    // preappend the directory
+    memmove(path + len, path, strlen(path) + 1);
+    memcpy(path, directory, len);
 
-    size_t file_path_size = strlen("www/") + strlen(path) + 1;
-    char *file = malloc(file_path_size);
+    http_req_struct->path = strdup(path);
 
-    if (file == NULL) {
-        perror("error when mallocing file name buffer");
-        goto error;
-    }
-
-    strcat(file, path);
-    snprintf(file, file_path_size, "www/%s", path);
-
-    http_req_struct->path = file;
-
+    free(cpy);
     return 0;
 error:
-    if (path != NULL) {
-        free(path);
-    }
+    free(cpy);
     return -1;
+malformed:
+    free(cpy);
+    return -2;
 };
 
 
@@ -72,10 +68,12 @@ void handle_connection(int client_fd) {
     read(client_fd, read_buffer, sizeof(read_buffer));
     struct http_req http_req_struct = {0};
     if (get_params(read_buffer, &http_req_struct) < 0) {
+        free(http_req_struct.path);
         close(client_fd);
         return;
     }
-    printf("%s\n", read_buffer);
+    printf("READ BUFFER: %s\n", read_buffer);
+    printf("FILE PATH: %s\n", http_req_struct.path);
 
 
 
@@ -111,8 +109,8 @@ void handle_connection(int client_fd) {
 
     write(client_fd, http_header, strlen(http_header));
 
-    // write in the file whilst handling partial writes
 
+    // write in the file whilst handling partial writes
     char buffer[4096] = "";
     size_t read_bytes = 0;
     while ((read_bytes = fread(buffer, 1, sizeof(buffer), ret_file)) > 0) {
