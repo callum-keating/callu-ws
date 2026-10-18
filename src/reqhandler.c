@@ -12,6 +12,18 @@ static void freeHeader(struct http_req *http_struct) {
     free(http_struct->path);
 };
 
+void handle_404(int client_fd) {
+    char *http_response = NULL;
+    printf("RETURNING 404\n");
+    asprintf(&http_response,
+    "HTTP/1.1 404 Not Found\r\n"
+    "Server: callu-ws\r\n"
+    "\r\n");
+
+    write(client_fd, http_response, strlen(http_response));
+    free(http_response);
+};
+
 static int get_params(char *http_header, struct http_req *http_struct) {
     int retVal = HTTP_ERROR_NONE;
     char *headerToTokenize = strdup(http_header);
@@ -62,7 +74,7 @@ void handle_connection(int client_fd) {
     }
 
     printf("READ BUFFER: %s\n", read_buffer);
-    printf("HHTTP PATH: %s\n", http_req_struct.path);
+    printf("HTTP PATH: %s\n", http_req_struct.path);
     printf("FILE PATH: %s\n", fpath);
 
 
@@ -72,8 +84,8 @@ void handle_connection(int client_fd) {
 
     if (ret_file == NULL) {
         printf("error opening file %s\n", fpath);
+        handle_404(client_fd);
         goto finish;
-        return;
     }
 
     // go to the end of the file
@@ -110,6 +122,7 @@ void handle_connection(int client_fd) {
     }
 
 finish:
+    free(fpath);
     freeHeader(&http_req_struct);
     close(client_fd);
 }
