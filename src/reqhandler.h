@@ -8,6 +8,11 @@ enum methods {
     HTTP_METHOD_DELETE,
 };
 
+#define HTTP_ERROR_NONE 0           // success
+#define HTTP_ERROR_MALFORMED -1     // if http header is malformed
+#define HTTP_ERROR_NONEXISTENT -2   // if requested page does not exist
+
+
 struct http_req {
     uint8_t version; // 1 for 1.1, 2 for 2, and 3 for 3
     char *path;      // path (not including www/)

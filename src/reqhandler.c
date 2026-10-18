@@ -8,82 +8,71 @@
 
 #include "reqhandler.h"
 
-static int get_params(char *http_header, struct http_req *http_req_struct) {
-    char *path = NULL;
-    char *cpy = NULL;
-    //  A request message from a client to a server includes, within the first line of that message, the method to be applied to the resource, the identifier of the resource, and the protocol version in use.  meaning I can assume the first line WILL be GET /whatever HTTP/1.1
-    if (strncmp(http_header, "GET", 3)) {
-        printf("METHOD IS NOT GET\n");
-        goto error;
-    }
-    http_req_struct->method = HTTP_METHOD_GET;
-    cpy = strdup(http_header);
-    path = strchr(cpy, ' ');
+static void freeHeader(struct http_req *http_struct) {
+    free(http_struct->path);
+};
 
-    if (path == NULL)
+static int get_params(char *http_header, struct http_req *http_struct) {
+    int retVal = HTTP_ERROR_NONE;
+    char *headerToTokenize = strdup(http_header);
+
+    char *token = strtok(headerToTokenize, " ");
+    if (token == NULL || strcmp(token, "GET") != 0)
+        // for now i will only accept GET requests
         goto malformed;
 
-    path++;
+    token = strtok(NULL, " ");
 
-    if (*path != '/')
+    // if the first character isn't a /
+    if (strncmp(token, "/", 1)) {
         goto malformed;
-
-    path++;
-
-    size_t until_space = 0;
-
-    while (path[until_space] != ' ' && path[until_space] != '\0') {
-        until_space++;
     }
-
-    path[until_space] = '\0';
-
-    char *directory = "www/";
-    size_t len = strlen(directory);
-
-    if (strcmp(path, "") == 0) {
-        path = strdup("index.html");
+    http_struct->path = strdup(token);
+    if (strcmp(http_struct->path, "/") == 0) {
+        free(http_struct->path);
+        http_struct->path = strdup("/index.html");
     }
+    http_struct->method = HTTP_METHOD_GET;
 
-    // preappend the directory
-    memmove(path + len, path, strlen(path) + 1);
-    memcpy(path, directory, len);
-
-    http_req_struct->path = strdup(path);
-
-    free(cpy);
-    return 0;
-error:
-    free(cpy);
-    return -1;
+    goto finish;
 malformed:
-    free(cpy);
-    return -2;
+    retVal = HTTP_ERROR_MALFORMED;
+finish:
+    free(headerToTokenize);
+    return retVal;
 };
 
 
 void handle_connection(int client_fd) {
-    // read socket for file
     char read_buffer[4096] = "";
+    char *fpath = NULL;
+
+    // read socket for file
     read(client_fd, read_buffer, sizeof(read_buffer));
     struct http_req http_req_struct = {0};
-    if (get_params(read_buffer, &http_req_struct) < 0) {
-        free(http_req_struct.path);
-        close(client_fd);
-        return;
+
+    if (get_params(read_buffer, &http_req_struct) != 0) {
+        printf("ERROR IN GET_PARAMS\n");
+        goto finish;
     }
+
+    if (asprintf(&fpath, "www%s", http_req_struct.path) == -1) {
+        printf("ERROR IN asprintf\n");
+        goto finish;
+    }
+
     printf("READ BUFFER: %s\n", read_buffer);
-    printf("FILE PATH: %s\n", http_req_struct.path);
+    printf("HHTTP PATH: %s\n", http_req_struct.path);
+    printf("FILE PATH: %s\n", fpath);
 
 
 
     FILE *ret_file;
-    ret_file = fopen(http_req_struct.path, "r");
+    ret_file = fopen(fpath, "r");
 
     if (ret_file == NULL) {
-        printf("error opening file %s\n", http_req_struct.path);
-        free(http_req_struct.path);
-        close(client_fd);
+        printf("error opening file %s\n", fpath);
+        goto finish;
         return;
     }
 
@@ -120,5 +109,7 @@ void handle_connection(int client_fd) {
         }
     }
 
+finish:
+    freeHeader(&http_req_struct);
     close(client_fd);
 }
