@@ -13,9 +13,9 @@ int main() {
     printf("Hello, Webserver!\n");
     int viscount = 0;
     struct sockaddr_in my_addr = {
-        .sin_addr.s_addr = INADDR_ANY,   // use ipv4
-        .sin_family = AF_INET,           // use port 1234. htons converts to network byte
-        .sin_port = htons(1234),         // accepts connections from any local ipv4 address
+        .sin_addr.s_addr = INADDR_ANY,   // accepts connections from any local ipv4 address
+        .sin_family = AF_INET,           // use ipv4
+        .sin_port = htons(1234),         // use port 1234. htons converts to network byte
     };
 
 
