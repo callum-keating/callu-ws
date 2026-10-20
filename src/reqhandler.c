@@ -77,6 +77,7 @@ void handle_connection(int client_fd) {
 
     if (param_retval == HTTP_ERROR_MALFORMED) {
         handle_malformed(client_fd);
+        goto finished;
     }
 
     if (asprintf(&fpath, "www%s", http_request.path) == -1) {
