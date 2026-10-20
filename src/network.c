@@ -4,6 +4,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#define GREEN(x) "\e[0;32m" x "\e[0m"
+
 static struct sockaddr_in *my_addr = {0};
 
 
@@ -42,7 +44,7 @@ int wait_until_connection() {
     struct sockaddr_in client_addr = {0};
     socklen_t client_len = sizeof(client_addr);
     int client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &client_len);
-    printf("CLIENT CONNECTED!\n");
+    printf(GREEN("CLIENT CONNECTED!\n"));
     if (client_fd == -1) {
         perror("error when accepting request");
         quick_exit(3);

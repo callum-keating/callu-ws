@@ -8,7 +8,6 @@
 #include "network.h"
 #include "reqhandler.h"
 
-
 int main() {
     printf("Hello, Webserver!\n");
     int viscount = 0;

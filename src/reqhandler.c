@@ -24,6 +24,18 @@ void handle_404(int client_fd) {
     free(http_response);
 };
 
+void handle_malformed(int client_fd) {
+    char *http_response = NULL;
+    printf("RETURNING 400\n");
+    asprintf(&http_response,
+    "HTTP/1.1 400 Bad Request\r\n"
+    "Server: callu-ws\r\n"
+    "\r\n");
+
+    write(client_fd, http_response, strlen(http_response));
+    free(http_response);
+};
+
 static int get_params(char *http_header, struct http_req *http_struct) {
     int retVal = HTTP_ERROR_NONE;
     char *headerToTokenize = strdup(http_header);
@@ -52,40 +64,31 @@ malformed:
 finish:
     free(headerToTokenize);
     return retVal;
-};
-
+}
 
 void handle_connection(int client_fd) {
+    struct http_req http_request = {0};
     char read_buffer[4096] = "";
     char *fpath = NULL;
 
-    // read socket for file
     read(client_fd, read_buffer, sizeof(read_buffer));
-    struct http_req http_req_struct = {0};
 
-    if (get_params(read_buffer, &http_req_struct) != 0) {
-        printf("ERROR IN GET_PARAMS\n");
-        goto finish;
+    int param_retval = get_params(read_buffer, &http_request);
+
+    if (param_retval == HTTP_ERROR_MALFORMED) {
+        handle_malformed(client_fd);
     }
 
-    if (asprintf(&fpath, "www%s", http_req_struct.path) == -1) {
+    if (asprintf(&fpath, "www%s", http_request.path) == -1) {
         printf("ERROR IN asprintf\n");
-        goto finish;
+        goto finished;
     }
 
-    printf("READ BUFFER: %s\n", read_buffer);
-    printf("HTTP PATH: %s\n", http_req_struct.path);
-    printf("FILE PATH: %s\n", fpath);
-
-
-
-    FILE *ret_file;
-    ret_file = fopen(fpath, "r");
+    FILE *ret_file = fopen(fpath, "r");
 
     if (ret_file == NULL) {
-        printf("error opening file %s\n", fpath);
         handle_404(client_fd);
-        goto finish;
+        goto finished;
     }
 
     // go to the end of the file
@@ -97,7 +100,6 @@ void handle_connection(int client_fd) {
     // go back to beginning of file
     rewind(ret_file);
 
-    printf("file is: %ld bytes long\n", file_size);
     char *http_header;
     asprintf(&http_header,
     "HTTP/1.1 200 OK\r\n"
@@ -110,7 +112,6 @@ void handle_connection(int client_fd) {
 
     write(client_fd, http_header, strlen(http_header));
 
-
     // write in the file whilst handling partial writes
     char buffer[4096] = "";
     size_t read_bytes = 0;
@@ -121,8 +122,8 @@ void handle_connection(int client_fd) {
         }
     }
 
-finish:
+finished:
     free(fpath);
-    freeHeader(&http_req_struct);
-    close(client_fd);
+    freeHeader(&http_request);
+    return;
 }
