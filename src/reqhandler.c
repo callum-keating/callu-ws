@@ -24,7 +24,15 @@ int parse_requestl(char *requestln, char *parsed[3]) {
   return 0;
 }
 
-void send_file(char *file_path) {
+void send_header(char *status, char *ContentType) {
+  asprintf("HTTP/1.1 %s\r\n"
+           "Content-Type: %s"
+           "Server: callu-webserver",
+           status, ContentType);
+  return;
+}
+
+void send_file(int client_fd, char *file_path) {
   FILE *retfile = fopen(file_path, "r");
   if (retfile == NULL) {
     // 404
@@ -59,9 +67,10 @@ void handle_connection(int client_fd) {
   char *file_path = malloc(path_size);
   strncpy(file_path, "www", path_size);
 
-  printf("before ncat\n");
   strncat(file_path, tokens[1], path_size);
   printf("the file is %s\n", file_path);
 
-  send_file(file_path);
+  send_header();
+
+  send_file(client_fd, file_path);
 }
